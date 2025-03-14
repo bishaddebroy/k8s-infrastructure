@@ -13,7 +13,7 @@ resource "google_container_cluster" "utsha_gke_cluster" {
   
   node_config {
     # Use e2-micro as specified in requirements
-    machine_type = "e2-micro"
+    machine_type = "e2-medium"
     
     # Use COS with containerd as specified in requirements
     image_type   = "cos_containerd"
