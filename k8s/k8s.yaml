@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bishad-pv-claim
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: validation-service
+  labels:
+    app: validation-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: validation-service
+  template:
+    metadata:
+      labels:
+        app: validation-service
+    spec:
+      containers:
+      - name: validation-service
+        image: us-central1-docker.pkg.dev/k8s-assignment-utsha/docker-repo/validation-service:latest
+        ports:
+        - containerPort: 6000
+        env:
+        - name: CALC_SERVICE_URL
+          value: "http://calculation-service:6001/calculate"
+        - name: PV_PATH
+          value: "/bishad_PV_dir"
+        volumeMounts:
+        - name: bishad-pv-storage
+          mountPath: /bishad_PV_dir
+      volumes:
+      - name: bishad-pv-storage
+        persistentVolumeClaim:
+          claimName: bishad-pv-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: validation-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 6000
+    targetPort: 6000
+  selector:
+    app: validation-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calculation-service
+  labels:
+    app: calculation-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calculation-service
+  template:
+    metadata:
+      labels:
+        app: calculation-service
+    spec:
+      containers:
+      - name: calculation-service
+        image: us-central1-docker.pkg.dev/k8s-assignment-utsha/docker-repo/calculation-service:latest
+        ports:
+        - containerPort: 6001
+        env:
+        - name: PV_PATH
+          value: "/bishad_PV_dir"
+        volumeMounts:
+        - name: bishad-pv-storage
+          mountPath: /bishad_PV_dir
+      volumes:
+      - name: bishad-pv-storage
+        persistentVolumeClaim:
+          claimName: bishad-pv-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: calculation-service
+spec:
+  ports:
+  - port: 6001
+    targetPort: 6001
+  selector:
+    app: calculation-service
